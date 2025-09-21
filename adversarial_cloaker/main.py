@@ -22,10 +22,13 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def load_trained_model(path='models/trained_cnn.pth'):
     model = CNN(num_classes=3)
-    model.load_state_dict(torch.load(path, map_location=device))
+    if os.path.exists(path):
+        model.load_state_dict(torch.load(path, map_location=device))
+        print(f"Loaded trained model from {path}")
+    else:
+        print(f"No trained model found at {path}. Using untrained model.")
     model.to(device)
     model.eval()
-    print(f"Loaded trained model from {path}")
     return model
 
 
@@ -81,7 +84,6 @@ def show_side_by_side(orig_img, cloaked_img, conf_orig=None, conf_cloak=None,
     plt.show(block=True)
 
 
-
 def predict_and_cloak_custom_images(model, image_dir='custom_images'):
     """
     Run predictions and generate adversarial cloaks for all images in custom_images folder,
@@ -90,7 +92,6 @@ def predict_and_cloak_custom_images(model, image_dir='custom_images'):
     os.makedirs(image_dir, exist_ok=True)  # ensure folder exists
     class_names = ['airplane', 'automobile', 'bird']
     cloaker = AdversarialCloaker(model=model, class_names=class_names, device=device)
-    preprocess = cloaker.preprocess
 
     for root, dirs, files in os.walk(image_dir):
         for file_name in files:
@@ -101,22 +102,22 @@ def predict_and_cloak_custom_images(model, image_dir='custom_images'):
             highres_img = Image.open(img_path).convert("RGB")
 
             # Predict original
-            orig_tensor = preprocess(highres_img)
+            orig_tensor = cloaker.preprocess(highres_img)
             conf_before = cloaker.predict(orig_tensor)
             print(f"\nOriginal Image: {file_name}")
             show_confidences(conf_before)
 
             # Generate cloaked image
             cloaked_img = cloaker.pgd_cloak(highres_img)
-            cloaked_tensor = preprocess(cloaked_img)
+            cloaked_tensor = cloaker.preprocess(cloaked_img)
             conf_after = cloaker.predict(cloaked_tensor)
             print(f"Cloaked Image: {file_name}")
             show_confidences(conf_after)
 
             # Display side by side with confidences
             show_side_by_side(
-                orig_tensor,
-                cloaked_tensor,
+                highres_img,
+                cloaked_img,
                 conf_orig=conf_before,
                 conf_cloak=conf_after,
                 orig_title=f"Original: {file_name}",
