@@ -94,7 +94,7 @@ def predict_and_cloak_custom_images(model, image_dir='custom_images'):
     cloaker = AdversarialCloaker(model=model, class_names=class_names, device=device)
 
     for root, dirs, files in os.walk(image_dir):
-        for file_name in files:
+        for file_name in sorted(files):
             if not file_name.lower().endswith(('png', 'jpg', 'jpeg')):
                 continue
 
